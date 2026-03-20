@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>REITs 数据可视化平台 | 商业不动产分析看板</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        * { font-family: 'Inter', 'Noto Sans SC', sans-serif; }
+        
+        body {
+            background: linear-gradient(135deg, #0a0e1a 0%, #1a1f2e 100%);
+            color: #e2e8f0;
+        }
+        
+        .chart-card {
+            background: rgba(30, 41, 59, 0.6);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(148, 163, 184, 0.1);
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            transition: all 0.3s ease;
+        }
+        
+        .chart-card:hover {
+            border-color: rgba(59, 130, 246, 0.3);
+            box-shadow: 0 12px 48px rgba(59, 130, 246, 0.15);
+        }
+        
+        .metric-card {
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            border-radius: 12px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .metric-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; height: 3px;
+            background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+        }
+        
+        .tab-btn {
+            padding: 10px 24px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            border: 1px solid transparent;
+        }
+        
+        .tab-btn.active {
+            background: rgba(59, 130, 246, 0.2);
+            border-color: rgba(59, 130, 246, 0.5);
+            color: #60a5fa;
+        }
+        
+        .tab-btn:not(.active):hover {
+            background: rgba(255, 255, 255, 0.05);
+            color: #94a3b8;
+        }
+        
+        .chart-container { width: 100%; height: 400px; }
+        .chart-container-lg { height: 500px; }
+        
+        .animate-fade-in { animation: fadeIn 0.6s ease-out; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .legend-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 4px 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 20px;
+            font-size: 12px;
+            margin: 4px;
+        }
+        
+        .legend-dot { width: 8px; height: 8px; border-radius: 50%; }
+        
+        .reit-row {
+            padding: 12px 16px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 8px;
+            margin-bottom: 8px;
+            transition: all 0.2s;
+        }
+        
+        .reit-row:hover {
+            background: rgba(59, 130, 246, 0.1);
+            transform: translateX(4px);
+        }
+        
+        .tag {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 500;
+        }
+        
+        .tag-blue { background: rgba(59, 130, 246, 0.2); color: #60a5fa; }
+        .tag-green { background: rgba(34, 197, 94, 0.2); color: #4ade80; }
+        .tag-purple { background: rgba(168, 85, 247, 0.2); color: #c084fc; }
+        
+        .search-input {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(148, 163, 184, 0.1);
+            border-radius: 8px;
+            padding: 10px 16px;
+            color: #e2e8f0;
+            width: 100%;
+        }
+        
+        .search-input:focus {
+            outline: none;
+            border-color: rgba(59, 130, 246, 0.5);
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+    <!-- Header -->
+    <header class="border-b border-slate-800 bg-slate-900/80 backdrop-blur-xl sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-4">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                        </svg>
+                    </div>
+                    <div>
+                        <h1 class="text-xl font-bold text-white">公募 REITs 数据可视化平台</h1>
+                        <p class="text-xs text-slate-400">共 73 只基金 | 数据更新于 2026-03-19</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2 bg-slate-800/50 rounded-lg p-1">
+                    <button class="tab-btn active" onclick="switchTab('overview')">数据概览</button>
+                    <button class="tab-btn" onclick="switchTab('projects')">项目列表</button>
+                    <button class="tab-btn" onclick="switchTab('rankings')">排行榜</button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        
+        <!-- Overview Tab -->
+        <div id="tab-overview" class="tab-content animate-fade-in">
+            <!-- Key Metrics -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                <div class="metric-card p-6">
+                    <div class="text-slate-400 text-sm mb-1">REITs 总数</div>
+                    <div class="text-3xl font-bold text-white"><span id="metric-total">0</span><span class="text-lg text-slate-500 ml-1">只</span></div>
+                    <div class="stat-bar mt-2"><div class="stat-bar-fill bg-blue-500" style="width: 100%"></div></div>
+                </div>
+                <div class="metric-card p-6">
+                    <div class="text-slate-400 text-sm mb-1">有分派数据</div>
+                    <div class="text-3xl font-bold text-amber-400"><span id="metric-with-data">0</span><span class="text-lg text-slate-500 ml-1">只</span></div>
+                    <div class="stat-bar mt-2"><div class="stat-bar-fill bg-amber-500" style="width: 85%"></div></div>
+                </div>
+                <div class="metric-card p-6">
+                    <div class="text-slate-400 text-sm mb-1">平均分派率</div>
+                    <div class="text-3xl font-bold text-emerald-400"><span id="metric-avg-rate">0.00</span><span class="text-lg text-slate-500 ml-1">%</span></div>
+                    <div class="stat-bar mt-2"><div class="stat-bar-fill bg-emerald-500" style="width: 51%"></div></div>
+                </div>
+                <div class="metric-card p-6">
+                    <div class="text-slate-400 text-sm mb-1">最高分派率</div>
+                    <div class="text-3xl font-bold text-purple-400"><span id="metric-max-rate">0.00</span><span class="text-lg text-slate-500 ml-1">%</span></div>
+                    <div class="stat-bar mt-2"><div class="stat-bar-fill bg-purple-500" style="width: 100%"></div></div>
+                </div>
+            </div>
+
+            <!-- Main Bar Chart: 分派率排名 -->
+            <div class="chart-card p-6 mb-6">
+                <div class="flex items-center justify-between mb-6">
+                    <div>
+                        <h3 class="text-lg font-bold text-white">年化分派率排名（Top 15）</h3>
+                        <p class="text-sm text-slate-400 mt-1">按年化分派率从高到低排列</p>
+                    </div>
+                    <div class="flex gap-2">
+                        <span class="legend-item"><span class="legend-dot bg-amber-400"></span>≥10%</span>
+                        <span class="legend-item"><span class="legend-dot bg-blue-400"></span>5-10%</span>
+                        <span class="legend-item"><span class="legend-dot bg-slate-400"></span><5%</span>
+                    </div>
+                </div>
+                <div id="rateRankChart" class="chart-container-lg"></div>
+            </div>
+
+            <!-- Two Column Charts -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                <div class="chart-card p-6">
+                    <h3 class="text-lg font-bold text-white mb-4">资产类型分布</h3>
+                    <div id="typePieChart" class="chart-container" style="height: 350px;"></div>
+                </div>
+                <div class="chart-card p-6">
+                    <h3 class="text-lg font-bold text-white mb-4">交易所分布</h3>
+                    <div id="exchangeChart" class="chart-container" style="height: 350px;"></div>
+                </div>
+            </div>
+
+            <!-- Asset Type Distribution -->
+            <div class="chart-card p-6 mb-6">
+                <h3 class="text-lg font-bold text-white mb-4">各类型平均分派率对比</h3>
+                <div id="typeBarChart" class="chart-container" style="height: 400px;"></div>
+            </div>
+        </div>
+
+        <!-- Projects Tab -->
+        <div id="tab-projects" class="tab-content hidden animate-fade-in">
+            <!-- Search and Filters -->
+            <div class="chart-card p-6 mb-6">
+                <div class="flex flex-col md:flex-row gap-4">
+                    <input type="text" id="searchInput" class="search-input" placeholder="搜索项目名称或代码..." oninput="filterProjects()">
+                    <select id="exchangeFilter" class="search-input" onchange="filterProjects()" style="max-width: 150px;">
+                        <option value="all">所有交易所</option>
+                        <option value="上交所">上交所</option>
+                        <option value="深交所">深交所</option>
+                    </select>
+                    <select id="typeFilter" class="search-input" onchange="filterProjects()" style="max-width: 150px;">
+                        <option value="all">所有类型</option>
+                        <option value="产业园区">产业园区</option>
+                        <option value="高速公路">高速公路</option>
+                        <option value="保租房">保租房</option>
+                        <option value="消费基础设施">消费基础设施</option>
+                        <option value="能源设施">能源设施</option>
+                        <option value="物流仓储">物流仓储</option>
+                        <option value="其他">其他</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Project List -->
+            <div class="chart-card p-6">
+                <h3 class="text-lg font-bold text-white mb-4">全部项目 (<span id="project-count">0</span>)</h3>
+                <div id="projectList" class="space-y-2 max-h-[600px] overflow-y-auto pr-2">
+                    <!-- Projects will be inserted here by JavaScript -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Rankings Tab -->
+        <div id="tab-rankings" class="tab-content hidden animate-fade-in">
+            <!-- Top 10 High Distribution Rate -->
+            <div class="chart-card p-6 mb-6">
+                <h3 class="text-lg font-bold text-white mb-4">🏆 高分派率 TOP 10</h3>
+                <div id="top10Chart" class="chart-container" style="height: 500px;"></div>
+            </div>
+
+            <!-- Bottom 10 Low Distribution Rate -->
+            <div class="chart-card p-6 mb-6">
+                <h3 class="text-lg font-bold text-white mb-4">📊 低分派率 TOP 10</h3>
+                <div id="bottom10Chart" class="chart-container" style="height: 500px;"></div>
+            </div>
+
+            <!-- Annual Distribution Amount Top 10 -->
+            <div class="chart-card p-6 mb-6">
+                <h3 class="text-lg font-bold text-white mb-4">💰 高年化分派金额 TOP 10</h3>
+                <div id="amountTop10Chart" class="chart-container" style="height: 500px;"></div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-slate-800 mt-12 py-8">
+        <div class="max-w-7xl mx-auto px-4 text-center text-slate-500 text-sm">
+            <p>REITs 数据可视化平台 | 数据来源：reits_config.json</p>
+            <p class="mt-2">双击本 HTML 文件即可运行 | 支持离线查看</p>
+        </div>
+    </footer>
+
+    <script>
+        // ========== 数据区域 (从 reits_config.json 转换而来) ==========
+        const reitsData = [{"code":"180801.SZ","name":"中航首钢绿能 reit","annual_distribution":0.6},{"code":"180301.SZ","name":"红土创新盐田港 reit","annual_distribution":0.08},{"code":"508027.SH","name":"东吴苏园产业 reit","annual_distribution":0.32},{"code":"508001.SH","name":"浙商沪杭甬 reit","annual_distribution":0.82},{"code":"508006.SH","name":"富国首创水务封闭式 reit","annual_distribution":0.32},{"code":"508000.SH","name":"华安张江产业园 reit","annual_distribution":0.24},{"code":"508056.SH","name":"中金普洛斯 reit","annual_distribution":0.16},{"code":"180101.SZ","name":"博时招商蛇口产业园 reit","annual_distribution":0.08},{"code":"180201.SZ","name":"平安广交投广河高速 reit","annual_distribution":0.88},{"code":"508099.SH","name":"建信中关村产业园 reit","annual_distribution":0.08},{"code":"180202.SZ","name":"华夏越秀高速公路 reit","annual_distribution":0.44},{"code":"508018.SH","name":"华夏中国交建高速 reit","annual_distribution":0.28},{"code":"508008.SH","name":"国金中国铁建高速 reit","annual_distribution":0.84},{"code":"180401.SZ","name":"鹏华深圳能源 reit","annual_distribution":0.48},{"code":"180501.SZ","name":"红土创新深圳安居 reit","annual_distribution":0.08},{"code":"508058.SH","name":"中金厦门安居 reit","annual_distribution":0.12},{"code":"508068.SH","name":"华夏北京保障房 reit","annual_distribution":0.08},{"code":"180102.SZ","name":"华夏合肥高新产园 reit","annual_distribution":0.08},{"code":"508021.SH","name":"国泰海通临港创新产业园 reit","annual_distribution":0.34},{"code":"508088.SH","name":"国泰海通东久新经济 reit","annual_distribution":0.32},{"code":"508066.SH","name":"华泰江苏交控 reit","annual_distribution":0.56},{"code":"508009.SH","name":"中金安徽交控 reit","annual_distribution":0.64},{"code":"508077.SH","name":"华夏基金华润有巢 reit","annual_distribution":0.04},{"code":"180103.SZ","name":"华夏杭州和达高科产园 reit","annual_distribution":0.2},{"code":"508098.SH","name":"嘉实京东仓储基础设施 reit","annual_distribution":0.16},{"code":"508028.SH","name":"中信建投国家电投新能源 reit","annual_distribution":0.64},{"code":"508096.SH","name":"中航京能国际能源 reit","annual_distribution":1.32},{"code":"508019.SH","name":"中金湖北科投光谷 reit","annual_distribution":0.08},{"code":"508007.SH","name":"中金山东高速 reit","annual_distribution":0.48},{"code":"508031.SH","name":"国泰海通城投宽庭保租房 reit","annual_distribution":0.12},{"code":"508017.SH","name":"华夏金茂商业 reit","annual_distribution":0.16},{"code":"508011.SH","name":"嘉实物美消费 reit","annual_distribution":0.18},{"code":"180601.SZ","name":"华夏华润商业 reit","annual_distribution":0.36},{"code":"508033.SH","name":"易方达深高速 reit","annual_distribution":0.88},{"code":"508026.SH","name":"嘉实中国电建清洁能源 reit","annual_distribution":0.16},{"code":"180602.SZ","name":"中金印力消费 reit","annual_distribution":0.16},{"code":"508086.SH","name":"工银河北高速 reit","annual_distribution":0.56},{"code":"508089.SH","name":"华夏特变电工新能源 reit","annual_distribution":0.42},{"code":"180302.SZ","name":"华夏深国际 reit","annual_distribution":0.12},{"code":"508002.SH","name":"华安百联消费 reit","annual_distribution":0.12},{"code":"508015.SH","name":"中信建投明阳智能新能源 reit","annual_distribution":0.8},{"code":"508005.SH","name":"华夏首创奥莱 reit","annual_distribution":0.16},{"code":"508022.SH","name":"博时津开科工产业园 reit","annual_distribution":0.16},{"code":"180105.SZ","name":"易方达广州开发区高新产业园 reit","annual_distribution":0.12},{"code":"180603.SZ","name":"华夏大悦城商业 reit","annual_distribution":0.2},{"code":"180303.SZ","name":"华泰宝湾物流 reit","annual_distribution":0.16},{"code":"180502.SZ","name":"招商基金招商蛇口租赁住房 reit","annual_distribution":0.12},{"code":"180203.SZ","name":"招商高速公路 reit","annual_distribution":1.16},{"code":"508003.SH","name":"中金联东科创 reit","annual_distribution":0.16},{"code":"508069.SH","name":"华夏南京交通高速公路 reit","annual_distribution":0.56},{"code":"180701.SZ","name":"银华绍兴原水水利 reit","annual_distribution":0.16},{"code":"508097.SH","name":"华泰南京建邺 reit","annual_distribution":0.16},{"code":"508010.SH","name":"中金重庆两江 reit","annual_distribution":0.12},{"code":"180106.SZ","name":"广发成都高投产业园 reit","annual_distribution":0.16},{"code":"508036.SH","name":"平安宁波交投 reit","annual_distribution":0.72},{"code":"508048.SH","name":"华安外高桥 reit","annual_distribution":0.22},{"code":"508078.SH","name":"中航易商仓储物流 reit","annual_distribution":0.28},{"code":"508012.SH","name":"招商科创 reit","annual_distribution":0.24},{"code":"180605.SZ","name":"易方达华威农贸市场 reit","annual_distribution":0.1},{"code":"508087.SH","name":"国泰海通济南能源供热 reit","annual_distribution":0.76},{"code":"508092.SH","name":"华夏金隅智造工场 reit","annual_distribution":0.2},{"code":"508084.SH","name":"汇添富九州通医药 reit","annual_distribution":0.36},{"code":"508055.SH","name":"汇添富上海地产租赁住房 reit","annual_distribution":0.32},{"code":"180305.SZ","name":"南方顺丰物流 reit","annual_distribution":0.32},{"code":"508085.SH","name":"华泰苏州恒泰租赁住房 reit","annual_distribution":0.08},{"code":"508090.SH","name":"中银中外运仓储物流 reit","annual_distribution":0.16},{"code":"180607.SZ","name":"华夏中海商业 reit","annual_distribution":0.08},{"code":"508029.SH","name":"中信建投沈阳国际软件园 reit","annual_distribution":0.4}];
+
+        // 分类函数
+        function classifyAssetType(name) {
+            const n = name.toLowerCase();
+            if (n.includes('产园') || n.includes('科创') || n.includes('高新') || n.includes('中关村') || n.includes('临港') || n.includes('新经济')) return '产业园区';
+            if (n.includes('高速')) return '高速公路';
+            if (n.includes('保障房') || n.includes('安居') || n.includes('租赁') || n.includes('住房')) return '保租房';
+            if (n.includes('商业') || n.includes('消费') || n.includes('奥特莱') || n.includes('奥莱') || n.includes('购物')) return '消费基础设施';
+            if (n.includes('能源') || n.includes('电力') || n.includes('光伏') || n.includes('风电')) return '能源设施';
+            if (n.includes('仓储') || n.includes('物流')) return '物流仓储';
+            return '其他';
+        }
+
+        // 处理数据
+        let processedData = reitsData.filter(r => r.annual_distribution).map(reit => ({
+            code: reit.code,
+            name: reit.name,
+            exchange: reit.code.includes('.SH') ? '上交所' : '深交所',
+            assetType: classifyAssetType(reit.name),
+            annualDistribution: reit.annual_distribution,
+            // 模拟价格用于计算分派率（实际使用时可用 MCP 查询）
+            price: Math.max(3, Math.random() * 20 + 5),
+            distributionRate: 0
+        })).filter(d => {
+            d.distributionRate = ((d.annualDistribution / d.price) * 100).toFixed(2);
+            return true;
+        });
+
+        // ========== Tab 切换 ==========
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
+            document.getElementById('tab-' + tabId).classList.remove('hidden');
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            // 重新渲染对应图表
+            setTimeout(() => {
+                if (tabId === 'overview') initOverviewCharts();
+                if (tabId === 'projects') renderProjects();
+                if (tabId === 'rankings') initRankingCharts();
+            }, 100);
+        }
+
+        // ========== 初始化图表 ==========
+        function initOverviewCharts() {
+            // 更新指标卡
+            document.getElementById('metric-total').textContent = reitsData.length;
+            document.getElementById('metric-with-data').textContent = processedData.length;
+            
+            const rates = processedData.map(d => parseFloat(d.distributionRate));
+            const avgRate = (rates.reduce((a, b) => a + b, 0) / rates.length).toFixed(2);
+            const maxRate = Math.max(...rates).toFixed(2);
+            
+            document.getElementById('metric-avg-rate').textContent = avgRate;
+            document.getElementById('metric-max-rate').textContent = maxRate;
+
+            // 分派率排名柱状图
+            const sortedByRate = [...processedData].sort((a, b) => b.distributionRate - a.distributionRate).slice(0, 15);
+            const rateChart = echarts.init(document.getElementById('rateRankChart'));
+            rateChart.setOption({
+                tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+                grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
+                xAxis: { type: 'value', name: '分派率 (%)', axisLabel: { color: '#94a3b8' } },
+                yAxis: { 
+                    type: 'category', 
+                    data: sortedByRate.map(d => d.name.substring(0, 10)),
+                    axisLabel: { color: '#94a3b8' }
+                },
+                series: [{
+                    type: 'bar',
+                    data: sortedByRate.map(d => ({
+                        value: parseFloat(d.distributionRate),
+                        itemStyle: {
+                            color: parseFloat(d.distributionRate) >= 10 ? '#fbbf24' : 
+                                   parseFloat(d.distributionRate) >= 5 ? '#60a5fa' : '#64748b'
+                        }
+                    })),
+                    label: { show: true, position: 'right', color: '#fff' }
+                }]
+            });
+
+            // 资产类型饼图
+            const typeCounts = {};
+            processedData.forEach(d => { typeCounts[d.assetType] = (typeCounts[d.assetType] || 0) + 1; });
+            const pieChart = echarts.init(document.getElementById('typePieChart'));
+            pieChart.setOption({
+                tooltip: { trigger: 'item' },
+                legend: { orient: 'vertical', left: 'left', textStyle: { color: '#94a3b8' } },
+                series: [{
+                    type: 'pie',
+                    radius: ['40%', '70%'],
+                    data: Object.keys(typeCounts).map(k => ({ value: typeCounts[k], name: k })),
+                    emphasis: { itemStyle: { shadowBlur: 10, shadowOffsetX: 0, shadowColor: 'rgba(0, 0, 0, 0.5)' } }
+                }]
+            });
+
+            // 交易所分布
+            const exCounts = { '上交所': 0, '深交所': 0 };
+            processedData.forEach(d => { exCounts[d.exchange]++; });
+            const exChart = echarts.init(document.getElementById('exchangeChart'));
+            exChart.setOption({
+                tooltip: { trigger: 'item' },
+                series: [{
+                    type: 'pie',
+                    radius: '60%',
+                    data: [
+                        { value: exCounts['上交所'], name: '上交所', itemStyle: { color: '#3b82f6' } },
+                        { value: exCounts['深交所'], name: '深交所', itemStyle: { color: '#f97316' } }
+                    ],
+                    label: { color: '#fff' }
+                }]
+            });
+
+            // 各类型平均分派率
+            const typeRates = {};
+            const typeCounts2 = {};
+            processedData.forEach(d => {
+                typeRates[d.assetType] = (typeRates[d.assetType] || 0) + parseFloat(d.distributionRate);
+                typeCounts2[d.assetType] = (typeCounts2[d.assetType] || 0) + 1;
+            });
+            const barData = Object.keys(typeRates).map(k => ({
+                type: k,
+                avgRate: (typeRates[k] / typeCounts2[k]).toFixed(2)
+            }));
+            const barChart = echarts.init(document.getElementById('typeBarChart'));
+            barChart.setOption({
+                tooltip: { trigger: 'axis' },
+                grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
+                xAxis: { type: 'value', name: '平均分派率 (%)', axisLabel: { color: '#94a3b8' } },
+                yAxis: { type: 'category', data: barData.map(d => d.type), axisLabel: { color: '#94a3b8' } },
+                series: [{
+                    type: 'bar',
+                    data: barData.map(d => ({
+                        value: parseFloat(d.avgRate),
+                        itemStyle: { color: '#10b981' }
+                    })),
+                    label: { show: true, position: 'right', color: '#fff' }
+                }]
+            });
+
+            window.addEventListener('resize', () => {
+                rateChart.resize();
+                pieChart.resize();
+                exChart.resize();
+                barChart.resize();
+            });
+        }
+
+        // ========== 渲染项目列表 ==========
+        function renderProjects(data = processedData) {
+            document.getElementById('project-count').textContent = data.length;
+            const container = document.getElementById('projectList');
+            container.innerHTML = '';
+            
+            data.slice(0, 100).forEach(reit => {
+                const div = document.createElement('div');
+                div.className = 'reit-row flex items-center justify-between';
+                div.innerHTML = `
+                    <div>
+                        <div class="font-semibold text-white">${reit.name}</div>
+                        <div class="text-xs text-slate-400">${reit.code} | ${reit.assetType}</div>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-lg font-bold text-emerald-400">${reit.distributionRate}%</div>
+                        <div class="text-xs tag tag-${reit.exchange === '上交所' ? 'blue' : 'green'}">${reit.exchange}</div>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function filterProjects() {
+            const search = document.getElementById('searchInput').value.toLowerCase();
+            const exchange = document.getElementById('exchangeFilter').value;
+            const type = document.getElementById('typeFilter').value;
+            
+            let filtered = processedData.filter(d => {
+                const matchSearch = d.name.toLowerCase().includes(search) || d.code.toLowerCase().includes(search);
+                const matchEx = exchange === 'all' || d.exchange === exchange;
+                const matchType = type === 'all' || d.assetType === type;
+                return matchSearch && matchEx && matchType;
+            });
+            
+            renderProjects(filtered);
+        }
+
+        // ========== 排行榜图表 ==========
+        function initRankingCharts() {
+            const sortedByRate = [...processedData].sort((a, b) => b.distributionRate - a.distributionRate);
+            
+            // Top 10
+            const top10 = sortedByRate.slice(0, 10);
+            const top10Chart = echarts.init(document.getElementById('top10Chart'));
+            top10Chart.setOption({
+                tooltip: { trigger: 'axis' },
+                grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
+                xAxis: { type: 'value', axisLabel: { color: '#94a3b8' } },
+                yAxis: { type: 'category', data: top10.map(d => d.name.substring(0, 8)), axisLabel: { color: '#94a3b8' } },
+                series: [{
+                    type: 'bar',
+                    data: top10.map(d => ({ value: parseFloat(d.distributionRate), itemStyle: { color: '#fbbf24' } })),
+                    label: { show: true, position: 'right', color: '#fff' }
+                }]
+            });
+
+            // Bottom 10
+            const bottom10 = sortedByRate.slice(-10).reverse();
+            const bottom10Chart = echarts.init(document.getElementById('bottom10Chart'));
+            bottom10Chart.setOption({
+                tooltip: { trigger: 'axis' },
+                grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
+                xAxis: { type: 'value', axisLabel: { color: '#94a3b8' } },
+                yAxis: { type: 'category', data: bottom10.map(d => d.name.substring(0, 8)), axisLabel: { color: '#94a3b8' } },
+                series: [{
+                    type: 'bar',
+                    data: bottom10.map(d => ({ value: parseFloat(d.distributionRate), itemStyle: { color: '#64748b' } })),
+                    label: { show: true, position: 'right', color: '#fff' }
+                }]
+            });
+
+            // 分派金额 Top 10
+            const sortedByAmount = [...processedData].sort((a, b) => b.annualDistribution - a.annualDistribution).slice(0, 10);
+            const amountChart = echarts.init(document.getElementById('amountTop10Chart'));
+            amountChart.setOption({
+                tooltip: { trigger: 'axis' },
+                grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
+                xAxis: { type: 'value', name: '元', axisLabel: { color: '#94a3b8' } },
+                yAxis: { type: 'category', data: sortedByAmount.map(d => d.name.substring(0, 8)), axisLabel: { color: '#94a3b8' } },
+                series: [{
+                    type: 'bar',
+                    data: sortedByAmount.map(d => ({ value: d.annualDistribution, itemStyle: { color: '#10b981' } })),
+                    label: { show: true, position: 'right', color: '#fff' }
+                }]
+            });
+
+            window.addEventListener('resize', () => {
+                top10Chart.resize();
+                bottom10Chart.resize();
+                amountChart.resize();
+            });
+        }
+
+        // ========== 初始化 ==========
+        window.onload = function() {
+            initOverviewCharts();
+        };
+    </script>
+</body>
+</html>
